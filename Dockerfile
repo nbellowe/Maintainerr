@@ -20,10 +20,6 @@ RUN yarn install --network-timeout 99999999
 # Copy the rest of the repository after deps are installed
 COPY . .
 
-RUN <<EOF cat >> ./apps/ui/.env
-VITE_BASE_PATH=/__PATH_PREFIX__
-EOF
-
 RUN yarn turbo build
 
 # Only install production dependencies to reduce image size

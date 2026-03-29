@@ -1,9 +1,7 @@
 /// <reference types="vite/client" />
 
-interface ImportMetaEnv {
-  readonly VITE_BASE_PATH?: string
-}
+import type { MaintainerrRuntimeConfig } from '@maintainerr/contracts'
 
-interface ImportMeta {
-  readonly env: ImportMetaEnv
+interface Window {
+  __MAINTAINERR_RUNTIME_CONFIG__?: MaintainerrRuntimeConfig
 }

@@ -6,8 +6,9 @@ import Overview from './components/Overview'
 // Settings is kept eager because it wraps an <Outlet /> — making it lazy
 // would cause two sequential fetches (wrapper then child) on every settings navigation.
 import Settings from './components/Settings'
+import { getRuntimeBasePath } from './utils/runtimeConfig'
 
-const basePath = import.meta.env.VITE_BASE_PATH || ''
+const basePath = getRuntimeBasePath()
 
 type LazyRouteModule = {
   default: ComponentType

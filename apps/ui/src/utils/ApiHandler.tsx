@@ -1,7 +1,7 @@
 import axios from 'axios'
+import { getRuntimeBasePath } from './runtimeConfig'
 
-export const API_BASE_PATH =
-  import.meta.env.VITE_API_BASE_PATH ?? import.meta.env.VITE_BASE_PATH ?? ''
+export const API_BASE_PATH = getRuntimeBasePath()
 
 const ApiHandler = async <Response,>(
   url: string,

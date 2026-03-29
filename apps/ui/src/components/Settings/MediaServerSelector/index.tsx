@@ -16,14 +16,13 @@ import {
   useSwitchMediaServer,
 } from '../../../api/settings'
 import { logClientError } from '../../../utils/ClientLogger'
+import { withBasePath } from '../../../utils/runtimeConfig'
 import Modal from '../../Common/Modal'
 
 interface MediaServerSelectorProps {
   currentType: MediaServerType | null
   onSwitch?: () => void
 }
-
-const basePath = import.meta.env.VITE_BASE_PATH ?? ''
 
 const serverOptions: {
   value: MediaServerType
@@ -35,13 +34,13 @@ const serverOptions: {
     value: MediaServerType.PLEX,
     name: 'Plex',
     description: 'Plex Media Server',
-    icon: `${basePath}/icons_logos/plex_logo.svg`,
+    icon: withBasePath('/icons_logos/plex_logo.svg'),
   },
   {
     value: MediaServerType.JELLYFIN,
     name: 'Jellyfin',
     description: 'Jellyfin Media Server',
-    icon: `${basePath}/icons_logos/jellyfin.svg`,
+    icon: withBasePath('/icons_logos/jellyfin.svg'),
   },
 ]
 

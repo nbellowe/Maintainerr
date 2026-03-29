@@ -6,6 +6,7 @@ import * as fs from 'fs';
 import { cleanupOpenApiDoc } from 'nestjs-zod';
 import path from 'path';
 import { AppModule } from './app/app.module';
+import { normalizeGlobalPrefix } from './app/basePath';
 import { MaintainerrLogger } from './modules/logging/logs.service';
 
 const dataDir =
@@ -20,15 +21,9 @@ async function bootstrap() {
 
   setupGracefulShutdown({ app });
 
-  const basePathEnv = process.env.BASE_PATH?.trim();
-  if (basePathEnv && basePathEnv !== '/') {
-    const normalizedBasePath = basePathEnv
-      .replace(/\/+$/, '')
-      .replace(/^\/+/, '');
-
-    if (normalizedBasePath.length > 0) {
-      app.setGlobalPrefix(normalizedBasePath);
-    }
+  const globalPrefix = normalizeGlobalPrefix(process.env.BASE_PATH);
+  if (globalPrefix) {
+    app.setGlobalPrefix(globalPrefix);
   }
 
   const config = new DocumentBuilder().setTitle('Maintainerr').build();

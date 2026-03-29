@@ -12,6 +12,7 @@ import {
 import { ToastContainer } from 'react-toastify'
 import SearchContext from '../../contexts/search-context'
 import GetApiHandler from '../../utils/ApiHandler'
+import { withBasePath } from '../../utils/runtimeConfig'
 import { SmallLoadingSpinner } from '../Common/LoadingSpinner'
 import SearchBar from '../Common/SearchBar'
 import NavBar from './NavBar'
@@ -25,7 +26,6 @@ const LayoutShell: React.FC<LayoutShellProps> = ({ children }) => {
   const SearchCtx = useContext(SearchContext)
   const navigate = useNavigate()
   const navigation = useNavigation()
-  const basePath = import.meta.env.VITE_BASE_PATH ?? ''
   const location = useLocation()
   const debouncedSearchRef = useRef<ReturnType<typeof debounce> | undefined>(
     undefined,
@@ -85,11 +85,11 @@ const LayoutShell: React.FC<LayoutShellProps> = ({ children }) => {
   return (
     <section>
       <title>Maintainerr</title>
-      <link rel="icon" href={`${basePath}/favicon.ico`} />
+      <link rel="icon" href={withBasePath('/favicon.ico')} />
       <link
         rel="apple-touch-icon"
         sizes="180x180"
-        href={`${basePath}/apple-touch-icon.png`}
+        href={withBasePath('/apple-touch-icon.png')}
       />
       <div className="flex h-full min-h-full min-w-0 bg-zinc-900">
         <div className="pwa-only fixed inset-0 z-20 h-1 w-full border-zinc-700 md:border-t" />

@@ -2,13 +2,37 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <script>
+      ;(() => {
+        const unresolvedBasePath = '__MAINTAINERR_BASE_PATH__'
+        const configuredBasePath =
+          unresolvedBasePath === '__MAINTAINERR_BASE_PATH__'
+            ? ''
+            : unresolvedBasePath
+        let normalizedBasePath = configuredBasePath
+
+        while (
+          normalizedBasePath.length > 1 &&
+          normalizedBasePath.endsWith('/')
+        ) {
+          normalizedBasePath = normalizedBasePath.slice(0, -1)
+        }
+
+        const baseElement = document.createElement('base')
+        baseElement.href = normalizedBasePath ? `${normalizedBasePath}/` : '/'
+        document.head.appendChild(baseElement)
+        window.__MAINTAINERR_RUNTIME_CONFIG__ = {
+          basePath: normalizedBasePath,
+        }
+      })()
+    </script>
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Maintainerr</title>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module" src="src/main.tsx"></script>
   </body>
 </html>

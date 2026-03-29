@@ -7,6 +7,7 @@ import {
 import { lazy, useEffect, useState } from 'react'
 import { toast } from 'react-toastify'
 import GetApiHandler, { DeleteApiHandler } from '../../../utils/ApiHandler'
+import { withBasePath } from '../../../utils/runtimeConfig'
 import Button from '../../Common/Button'
 import LazyModalBoundary from '../../Common/LazyModalBoundary'
 import type { AgentConfiguration } from './CreateNotificationModal'
@@ -17,8 +18,6 @@ const NotificationSettings = () => {
   const [addModalActive, setAddModalActive] = useState(false)
   const [configurations, setConfigurations] = useState<AgentConfiguration[]>()
   const [editConfig, setEditConfig] = useState<AgentConfiguration>()
-
-  const basePath = import.meta.env.VITE_BASE_PATH ?? ''
 
   useEffect(() => {
     GetApiHandler<AgentConfiguration[]>('/notifications/configurations').then(
@@ -57,7 +56,7 @@ const NotificationSettings = () => {
               className="h-[1em] w-[2.5em]"
               width={'0'}
               height={'0'}
-              src={`${basePath}/beta.svg`}
+              src={withBasePath('/beta.svg')}
               alt="BETA"
             />
           </h3>

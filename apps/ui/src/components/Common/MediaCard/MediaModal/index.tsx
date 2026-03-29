@@ -2,6 +2,7 @@ import { MediaItem } from '@maintainerr/contracts'
 import React, { memo, useEffect, useMemo, useState } from 'react'
 import { useMediaServerType } from '../../../../hooks/useMediaServerType'
 import GetApiHandler from '../../../../utils/ApiHandler'
+import { withBasePath } from '../../../../utils/runtimeConfig'
 
 interface ModalContentProps {
   onClose: () => void
@@ -25,10 +26,9 @@ interface ModalContentProps {
   isManual?: boolean
 }
 
-const basePath = import.meta.env.VITE_BASE_PATH ?? ''
 const ratingIcons: Record<string, string> = {
-  audience: `${basePath}/icons_logos/tmdb_icon.svg`,
-  critic: `${basePath}/icons_logos/rt_critic.svg`,
+  audience: withBasePath('/icons_logos/tmdb_icon.svg'),
+  critic: withBasePath('/icons_logos/rt_critic.svg'),
 }
 
 const MediaModalContent: React.FC<ModalContentProps> = memo(
@@ -49,8 +49,6 @@ const MediaModalContent: React.FC<ModalContentProps> = memo(
       [mediaType],
     )
     const resolvedBackdrop = tmdbid ? backdrop : null
-
-    const basePath = import.meta.env.VITE_BASE_PATH ?? ''
 
     useEffect(() => {
       GetApiHandler('/media-server').then((resp) => {
@@ -184,7 +182,7 @@ const MediaModalContent: React.FC<ModalContentProps> = memo(
                         rel="noreferrer"
                       >
                         <img
-                          src={`${basePath}/icons_logos/tmdb_logo.svg`}
+                          src={withBasePath('/icons_logos/tmdb_logo.svg')}
                           alt="TMDB Logo"
                           width={128}
                           height={32}
@@ -201,7 +199,7 @@ const MediaModalContent: React.FC<ModalContentProps> = memo(
                         rel="noreferrer"
                       >
                         <img
-                          src={`${basePath}/icons_logos/plex_logo.svg`}
+                          src={withBasePath('/icons_logos/plex_logo.svg')}
                           alt="Plex Logo"
                           width={128}
                           height={32}
@@ -218,7 +216,7 @@ const MediaModalContent: React.FC<ModalContentProps> = memo(
                         rel="noreferrer"
                       >
                         <img
-                          src={`${basePath}/icons_logos/jellyfin.svg`}
+                          src={withBasePath('/icons_logos/jellyfin.svg')}
                           alt="Jellyfin Logo"
                           width={128}
                           height={32}
@@ -235,7 +233,7 @@ const MediaModalContent: React.FC<ModalContentProps> = memo(
                         rel="noreferrer"
                       >
                         <img
-                          src={`${basePath}/icons_logos/tautulli_logo.svg`}
+                          src={withBasePath('/icons_logos/tautulli_logo.svg')}
                           alt="Tautulli Logo"
                           width={128}
                           height={32}

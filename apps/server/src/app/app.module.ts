@@ -26,8 +26,10 @@ import { RulesModule } from '../modules/rules/rules.module';
 import { SettingsModule } from '../modules/settings/settings.module';
 import { SettingsService } from '../modules/settings/settings.service';
 import { AppController } from './app.controller';
+import { normalizeBasePath } from './basePath';
 import { AppService } from './app.service';
 import ormConfig from './config/typeOrmConfig';
+import { UiController } from './ui.controller';
 
 @Module({
   imports: [
@@ -56,17 +58,22 @@ import ormConfig from './config/typeOrmConfig';
           return [];
         }
 
+        const basePath = normalizeBasePath(process.env.BASE_PATH);
+
         return [
           {
             rootPath: join(__dirname, '..', 'ui'),
-            serveRoot: process.env.BASE_PATH || undefined,
+            serveRoot: basePath,
             exclude: ['/api/{*path}'],
+            serveStaticOptions: {
+              index: false,
+            },
           },
         ];
       },
     }),
   ],
-  controllers: [AppController],
+  controllers: [AppController, UiController],
   providers: [
     AppService,
     {

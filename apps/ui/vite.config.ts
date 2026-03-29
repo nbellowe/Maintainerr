@@ -1,15 +1,10 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
-import { loadEnv } from 'vite'
 
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '')
-  // Use __PATH_PREFIX__ as a placeholder that will be replaced at runtime
-  const basePath = env.VITE_BASE_PATH || ''
-
+export default defineConfig(() => {
   return {
     plugins: [react()],
-    base: basePath || '/',
+    base: './',
     build: {
       outDir: 'dist',
       emptyOutDir: true,
@@ -52,10 +47,6 @@ export default defineConfig(({ mode }) => {
     },
     test: {
       environment: 'jsdom',
-    },
-    // Ensure environment variables are available and can be replaced at runtime
-    define: {
-      'import.meta.env.VITE_BASE_PATH': JSON.stringify(basePath),
     },
   }
 })
