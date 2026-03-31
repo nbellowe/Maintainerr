@@ -49,11 +49,11 @@ const TestButton = <T,>(props: ITestButton<T>) => {
           message,
         })
       })
-      .catch((error: unknown) => {
+      .catch((err: unknown) => {
         setClicked({ clicked: true, status: false })
         props.onTestComplete?.({
           status: false,
-          message: getApiErrorMessage(error),
+          message: getApiErrorMessage(err),
         })
       })
       .finally(() => {

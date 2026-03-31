@@ -165,9 +165,9 @@ const JellyfinSettings = () => {
         setJellyfinUsers([])
         toast.error(`Connection failed: ${result.message}`)
       }
-    } catch (error) {
+    } catch (err) {
       const message = getApiErrorMessage(
-        error,
+        err,
         'Failed to connect to Jellyfin. Verify URL and API key.',
       )
       setTestResult({ status: false, message })
@@ -194,8 +194,8 @@ const JellyfinSettings = () => {
     try {
       await saveSettings(data as JellyfinSetting)
       toast.success('Jellyfin settings saved successfully!')
-    } catch (error) {
-      const message = getApiErrorMessage(error, 'Failed to save settings')
+    } catch (err) {
+      const message = getApiErrorMessage(err, 'Failed to save settings')
       toast.error(message)
     }
   }

@@ -104,6 +104,7 @@ export const createCollectionMedia = (
     isManual: false,
     mediaServerId: faker.number.int().toString(),
     tmdbId: faker.number.int(),
+    tvdbId: faker.number.int(),
     ...properties,
   };
 };

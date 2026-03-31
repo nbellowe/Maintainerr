@@ -3,11 +3,12 @@ import {
   JellyfinSetting,
   MaintainerrEvent,
   MediaServerType,
+  MetadataProviderPreference,
   SeerrSetting,
   TautulliSetting,
 } from '@maintainerr/contracts';
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { isValidCron } from 'cron-validator';
 import { randomUUID } from 'crypto';
@@ -83,6 +84,12 @@ export class SettingsService implements SettingDto {
 
   tautulli_api_key: string;
 
+  tmdb_api_key?: string;
+
+  tvdb_api_key?: string;
+
+  metadata_provider_preference?: MetadataProviderPreference;
+
   collection_handler_job_cron: string;
 
   rules_handler_job_cron: string;
@@ -137,6 +144,11 @@ export class SettingsService implements SettingDto {
       this.seerr_api_key = settingsDb?.seerr_api_key;
       this.tautulli_url = settingsDb?.tautulli_url;
       this.tautulli_api_key = settingsDb?.tautulli_api_key;
+      this.tmdb_api_key = settingsDb?.tmdb_api_key;
+      this.tvdb_api_key = settingsDb?.tvdb_api_key;
+      this.metadata_provider_preference =
+        settingsDb?.metadata_provider_preference ??
+        MetadataProviderPreference.TMDB_PRIMARY;
       this.collection_handler_job_cron =
         settingsDb?.collection_handler_job_cron;
       this.rules_handler_job_cron = settingsDb?.rules_handler_job_cron;
@@ -175,6 +187,27 @@ export class SettingsService implements SettingDto {
     }
   }
 
+  @OnEvent(MaintainerrEvent.Settings_Updated)
+  handleMetadataSettingsUpdate(payload: {
+    settings: {
+      tmdb_api_key?: string | null;
+      tvdb_api_key?: string | null;
+      metadata_provider_preference?: MetadataProviderPreference;
+    };
+  }) {
+    if ('tmdb_api_key' in payload.settings) {
+      this.tmdb_api_key = payload.settings.tmdb_api_key ?? undefined;
+    }
+    if ('tvdb_api_key' in payload.settings) {
+      this.tvdb_api_key = payload.settings.tvdb_api_key ?? undefined;
+    }
+    if ('metadata_provider_preference' in payload.settings) {
+      this.metadata_provider_preference =
+        payload.settings.metadata_provider_preference ??
+        MetadataProviderPreference.TMDB_PRIMARY;
+    }
+  }
+
   public async getSettings() {
     try {
       return this.settingsRepo.findOne({ where: {} });
@@ -208,6 +241,8 @@ export class SettingsService implements SettingDto {
       jellyfin_api_key: maskSecret(settings.jellyfin_api_key),
       seerr_api_key: maskSecret(settings.seerr_api_key),
       tautulli_api_key: maskSecret(settings.tautulli_api_key),
+      tmdb_api_key: maskSecret(settings.tmdb_api_key),
+      tvdb_api_key: maskSecret(settings.tvdb_api_key),
     };
   }
 
@@ -486,13 +521,13 @@ export class SettingsService implements SettingDto {
           'Failed to connect to Jellyfin. Verify URL and API key.',
         ),
       };
-    } catch (error) {
-      logConnectionTestError(this.logger, 'Jellyfin');
+    } catch (e) {
+      logConnectionTestError(this.logger, 'Jellyfin', e);
       return {
         status: 'NOK',
         code: 0,
         message: formatConnectionFailureMessage(
-          error,
+          e,
           'Failed to connect to Jellyfin. Verify URL and API key.',
         ),
       };
@@ -924,13 +959,13 @@ export class SettingsService implements SettingDto {
             message: resp.response.data?.tautulli_version,
           }
         : { status: 'NOK', code: 0, message: 'Failure' };
-    } catch (error) {
-      logConnectionTestError(this.logger, 'Tautulli');
+    } catch (e) {
+      logConnectionTestError(this.logger, 'Tautulli', e);
       return {
         status: 'NOK',
         code: 0,
         message: formatConnectionFailureMessage(
-          error,
+          e,
           'Failed to connect to Tautulli. Verify URL and API key.',
         ),
       };
@@ -955,13 +990,13 @@ export class SettingsService implements SettingDto {
       return resp?.version != null
         ? { status: 'OK', code: 1, message: resp.version }
         : { status: 'NOK', code: 0, message: 'Failure' };
-    } catch (error) {
-      logConnectionTestError(this.logger, 'Radarr');
+    } catch (e) {
+      logConnectionTestError(this.logger, 'Radarr', e);
       return {
         status: 'NOK',
         code: 0,
         message: formatConnectionFailureMessage(
-          error,
+          e,
           'Failed to connect to Radarr. Verify URL and API key.',
         ),
       };
@@ -986,13 +1021,13 @@ export class SettingsService implements SettingDto {
       return resp?.version != null
         ? { status: 'OK', code: 1, message: resp.version }
         : { status: 'NOK', code: 0, message: 'Failure' };
-    } catch (error) {
-      logConnectionTestError(this.logger, 'Sonarr');
+    } catch (e) {
+      logConnectionTestError(this.logger, 'Sonarr', e);
       return {
         status: 'NOK',
         code: 0,
         message: formatConnectionFailureMessage(
-          error,
+          e,
           'Failed to connect to Sonarr. Verify URL and API key.',
         ),
       };
@@ -1005,13 +1040,13 @@ export class SettingsService implements SettingDto {
       return resp?.version != null
         ? { status: 'OK', code: 1, message: resp.version }
         : { status: 'NOK', code: 0, message: 'Failure' };
-    } catch (error) {
-      logConnectionTestError(this.logger, 'Plex');
+    } catch (e) {
+      logConnectionTestError(this.logger, 'Plex', e);
       return {
         status: 'NOK',
         code: 0,
         message: formatConnectionFailureMessage(
-          error,
+          e,
           'Failed to connect to Plex. Verify host and credentials.',
         ),
       };

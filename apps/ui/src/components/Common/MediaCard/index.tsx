@@ -1,8 +1,13 @@
 import { Transition } from '@headlessui/react'
 import { DocumentAddIcon, DocumentRemoveIcon } from '@heroicons/react/solid'
-import { MediaItemType } from '@maintainerr/contracts'
+import { MediaItemType, MediaProviderIds } from '@maintainerr/contracts'
 import React, { memo, useEffect, useState } from 'react'
 import GetApiHandler from '../../../utils/ApiHandler'
+import {
+  buildProviderIdParams,
+  mediaTypeBgColor,
+  toImageEndpointType,
+} from '../../../utils/mediaTypeUtils'
 import AddModal from '../../AddModal'
 import RemoveFromCollectionBtn from '../../Collection/CollectionDetail/RemoveFromCollectionBtn'
 import Button from '../Button'
@@ -16,7 +21,7 @@ interface IMediaCard {
   title: string
   userScore: number
   inProgress?: boolean
-  tmdbid?: string
+  providerIds?: MediaProviderIds
   libraryId?: string
   type?: MediaItemType
   collectionPage: boolean
@@ -39,7 +44,7 @@ const MediaCard: React.FC<IMediaCard> = ({
   collectionId = 0,
   daysLeft = 9999,
   exclusionId = undefined,
-  tmdbid = undefined,
+  providerIds = undefined,
   userScore,
   collectionPage = false,
   exclusionType = undefined,
@@ -57,7 +62,10 @@ const MediaCard: React.FC<IMediaCard> = ({
   const imageType = ['season', 'episode'].includes(mediaType)
     ? 'show'
     : mediaType
-  const imageRequestKey = tmdbid ? `${imageType}:${tmdbid}` : undefined
+  const imageParams = providerIds ? buildProviderIdParams(providerIds) : null
+  const imageRequestKey = imageParams?.toString()
+    ? `${toImageEndpointType(mediaType)}:${imageParams.toString()}`
+    : undefined
   const hasExclusion = exclusionId !== undefined || exclusionType !== undefined
 
   const openMediaModal = () => {
@@ -69,18 +77,31 @@ const MediaCard: React.FC<IMediaCard> = ({
   useEffect(() => {
     let isActive = true
 
-    if (tmdbid) {
-      GetApiHandler(`/moviedb/image/${imageType}/${tmdbid}`).then((resp) => {
-        if (isActive) {
-          setImageResult({ requestKey: imageRequestKey, path: resp })
-        }
-      })
+    if (imageRequestKey && imageParams) {
+      GetApiHandler<{ url?: string }>(
+        `/metadata/image/${toImageEndpointType(mediaType)}?${imageParams.toString()}`,
+      )
+        .then((resp) => {
+          if (isActive) {
+            setImageResult({
+              requestKey: imageRequestKey,
+              path: resp?.url ?? null,
+            })
+          }
+        })
+        .catch(() => {
+          if (isActive) {
+            setImageResult({ requestKey: imageRequestKey, path: null })
+          }
+        })
+    } else if (isActive) {
+      setImageResult({ requestKey: imageRequestKey, path: null })
     }
 
     return () => {
       isActive = false
     }
-  }, [imageRequestKey, imageType, tmdbid])
+  }, [imageParams, imageRequestKey, mediaType])
 
   const image =
     imageResult.requestKey === imageRequestKey ? imageResult.path : null
@@ -136,22 +157,14 @@ const MediaCard: React.FC<IMediaCard> = ({
             <img
               className="absolute inset-0 h-full w-full object-cover"
               alt=""
-              src={`https://image.tmdb.org/t/p/w300_and_h450_face${image}`}
+              src={image}
               loading="lazy"
               decoding="async"
             />
           ) : undefined}
           <div className="absolute left-0 right-0 flex items-center justify-between p-2">
             <div
-              className={`pointer-events-none z-40 rounded-full shadow ${
-                mediaType === 'movie'
-                  ? 'bg-zinc-900'
-                  : mediaType === 'show'
-                    ? 'bg-amber-900'
-                    : mediaType === 'season'
-                      ? 'bg-yellow-700'
-                      : 'bg-rose-900'
-              }`}
+              className={`pointer-events-none z-40 rounded-full shadow ${mediaTypeBgColor(mediaType)}`}
             >
               <div className="flex h-4 items-center px-2 py-2 text-center text-xs font-medium uppercase tracking-wider text-zinc-200 sm:h-5">
                 {mediaType}
@@ -161,15 +174,7 @@ const MediaCard: React.FC<IMediaCard> = ({
           {hasExclusion && !collectionPage ? (
             <div className="absolute right-0 flex items-center justify-between p-2">
               <div
-                className={`pointer-events-none z-40 rounded-full shadow ${
-                  mediaType === 'movie'
-                    ? 'bg-zinc-900'
-                    : mediaType === 'show'
-                      ? 'bg-amber-900'
-                      : mediaType === 'season'
-                        ? 'bg-yellow-700'
-                        : 'bg-rose-900'
-                }`}
+                className={`pointer-events-none z-40 rounded-full shadow ${mediaTypeBgColor(mediaType)}`}
               >
                 <div className="flex h-4 items-center px-2 py-2 text-center text-xs font-medium uppercase tracking-wider text-zinc-200 sm:h-5">
                   {'EXCL'}
@@ -182,15 +187,7 @@ const MediaCard: React.FC<IMediaCard> = ({
           {collectionPage && isManual && !showDetail ? (
             <div className="absolute bottom-0 left-1/2 flex -translate-x-1/2 transform items-center justify-between p-2">
               <div
-                className={`pointer-events-none z-40 rounded-full shadow ${
-                  mediaType === 'movie'
-                    ? 'bg-zinc-900'
-                    : mediaType === 'show'
-                      ? 'bg-amber-900'
-                      : mediaType === 'season'
-                        ? 'bg-yellow-700'
-                        : 'bg-rose-900'
-                }`}
+                className={`pointer-events-none z-40 rounded-full shadow ${mediaTypeBgColor(mediaType)}`}
               >
                 <div className="flex h-4 items-center px-2 py-2 text-center text-xs font-medium uppercase tracking-wider text-zinc-200 sm:h-5">
                   {'MANUAL'}
@@ -203,17 +200,7 @@ const MediaCard: React.FC<IMediaCard> = ({
           {collectionPage && !exclusionType && daysLeft !== 9999 ? (
             <div className="absolute right-0 flex items-center justify-between p-2">
               <div
-                className={`pointer-events-none z-40 rounded-full shadow ${
-                  daysLeft < 0
-                    ? 'bg-red-700'
-                    : mediaType === 'movie'
-                      ? 'bg-zinc-900'
-                      : mediaType === 'show'
-                        ? 'bg-amber-900'
-                        : mediaType === 'season'
-                          ? 'bg-yellow-700'
-                          : 'bg-rose-900'
-                } `}
+                className={`pointer-events-none z-40 rounded-full shadow ${daysLeft < 0 ? 'bg-red-700' : mediaTypeBgColor(mediaType)}`}
               >
                 <div className="flex h-4 items-center px-2 py-2 text-center text-xs font-medium uppercase tracking-wider text-zinc-200 sm:h-5">
                   {daysLeft}
@@ -226,15 +213,7 @@ const MediaCard: React.FC<IMediaCard> = ({
           {collectionPage && exclusionType === 'global' ? (
             <div className="absolute right-0 flex items-center justify-between p-2">
               <div
-                className={`pointer-events-none z-40 rounded-full shadow ${
-                  mediaType === 'movie'
-                    ? 'bg-zinc-900'
-                    : mediaType === 'show'
-                      ? 'bg-amber-900'
-                      : mediaType === 'season'
-                        ? 'bg-yellow-700'
-                        : 'bg-rose-900'
-                }`}
+                className={`pointer-events-none z-40 rounded-full shadow ${mediaTypeBgColor(mediaType)}`}
               >
                 <div className="flex h-4 items-center px-2 py-2 text-center text-xs font-medium uppercase tracking-wider text-zinc-200 sm:h-5">
                   {exclusionType.toUpperCase()}
@@ -343,7 +322,7 @@ const MediaCard: React.FC<IMediaCard> = ({
           title={title}
           summary={summary || 'No description available.'}
           mediaType={mediaType}
-          tmdbid={tmdbid}
+          providerIds={providerIds}
           year={year}
           userScore={userScore}
         />

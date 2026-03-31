@@ -7,7 +7,7 @@ import {
 } from '../../../test/utils/data';
 import { MediaServerFactory } from '../api/media-server/media-server.factory';
 import { IMediaServerService } from '../api/media-server/media-server.interface';
-import { TmdbIdService } from '../api/tmdb-api/tmdb-id.service';
+import { MetadataService } from '../metadata/metadata.service';
 import { CollectionsService } from './collections.service';
 import { Collection } from './entities/collection.entities';
 import { CollectionMedia } from './entities/collection_media.entities';
@@ -18,7 +18,7 @@ describe('CollectionsService', () => {
   let mediaServer: Mocked<IMediaServerService>;
   let collectionRepo: Mocked<Repository<Collection>>;
   let collectionMediaRepo: Mocked<Repository<CollectionMedia>>;
-  let tmdbIdService: Mocked<TmdbIdService>;
+  let metadataService: Mocked<MetadataService>;
 
   beforeEach(async () => {
     const { unit, unitRef } =
@@ -30,7 +30,7 @@ describe('CollectionsService', () => {
     collectionMediaRepo = unitRef.get(
       getRepositoryToken(CollectionMedia) as string,
     );
-    tmdbIdService = unitRef.get(TmdbIdService);
+    metadataService = unitRef.get(MetadataService);
 
     mediaServer = {
       supportsFeature: jest.fn().mockReturnValue(false),
@@ -87,7 +87,7 @@ describe('CollectionsService', () => {
     jest
       .spyOn(service as any, 'checkAutomaticMediaServerLink')
       .mockResolvedValue(collection);
-    tmdbIdService.getTmdbIdFromMediaServerId.mockRejectedValue(
+    metadataService.resolveIds.mockRejectedValue(
       new Error('tmdb lookup failed'),
     );
 

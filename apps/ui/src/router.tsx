@@ -82,6 +82,9 @@ const settingsSeerrRoute = createLazyRoute(
 const settingsTautulliRoute = createLazyRoute(
   () => import('./components/Settings/Tautulli'),
 )
+const settingsMetadataRoute = createLazyRoute(
+  () => import('./components/Settings/Metadata/MetadataSettings'),
+)
 const settingsNotificationsRoute = createLazyRoute(
   () => import('./components/Settings/Notifications'),
 )
@@ -220,6 +223,11 @@ const appRoutes: AppRoute[] = [
         path: 'tautulli',
         lazy: settingsTautulliRoute.lazy,
         preload: settingsTautulliRoute.preload,
+      },
+      {
+        path: 'metadata',
+        lazy: settingsMetadataRoute.lazy,
+        preload: settingsMetadataRoute.preload,
       },
       {
         path: 'notifications',

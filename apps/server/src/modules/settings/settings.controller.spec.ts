@@ -1,3 +1,8 @@
+import {
+  MetadataProviderPreference,
+  type TmdbSetting,
+  type TvdbSetting,
+} from '@maintainerr/contracts';
 import { radarrSettingSchema } from '@maintainerr/contracts';
 import { StreamableFile } from '@nestjs/common';
 import { Response } from 'express';
@@ -6,6 +11,7 @@ import { ZodValidationPipe } from 'nestjs-zod';
 import { DatabaseDownloadService } from './database-download.service';
 import { Settings } from './entities/settings.entities';
 import { MediaServerSwitchService } from './media-server-switch.service';
+import { MetadataSettingsService } from './metadata-settings.service';
 import { SettingsController } from './settings.controller';
 import { SettingsService } from './settings.service';
 
@@ -22,6 +28,16 @@ describe('SettingsController', () => {
     testJellyfin: jest.fn(),
     removeJellyfinSettings: jest.fn(),
   } as unknown as jest.Mocked<SettingsService>;
+
+  const metadataSettingsService = {
+    updateTmdbSetting: jest.fn(),
+    removeTmdbSetting: jest.fn(),
+    testTmdb: jest.fn(),
+    updateTvdbSetting: jest.fn(),
+    removeTvdbSetting: jest.fn(),
+    testTvdb: jest.fn(),
+    updateMetadataProviderPreference: jest.fn(),
+  } as unknown as jest.Mocked<MetadataSettingsService>;
 
   const mediaServerSwitchService = {
     previewSwitch: jest.fn(),
@@ -48,6 +64,7 @@ describe('SettingsController', () => {
     jest.clearAllMocks();
     controller = new SettingsController(
       settingsService,
+      metadataSettingsService,
       mediaServerSwitchService,
       databaseDownloadService,
     );
@@ -93,6 +110,26 @@ describe('SettingsController', () => {
           jellyfin_user_id: 'u-1',
         },
       },
+      {
+        name: 'TMDB',
+        method: 'getTmdbSetting' as const,
+        entityOverrides: {
+          tmdb_api_key: 'tmdb-key',
+        },
+        expected: {
+          api_key: 'tmdb-key',
+        },
+      },
+      {
+        name: 'TVDB',
+        method: 'getTvdbSetting' as const,
+        entityOverrides: {
+          tvdb_api_key: 'tvdb-key',
+        },
+        expected: {
+          api_key: 'tvdb-key',
+        },
+      },
     ])(
       'maps $name settings from entity values',
       async ({ method, entityOverrides, expected }) => {
@@ -108,6 +145,8 @@ describe('SettingsController', () => {
       { name: 'Tautulli', method: 'getTautulliSetting' as const },
       { name: 'Seerr', method: 'getSeerrSetting' as const },
       { name: 'Jellyfin', method: 'getJellyfinSetting' as const },
+      { name: 'TMDB', method: 'getTmdbSetting' as const },
+      { name: 'TVDB', method: 'getTvdbSetting' as const },
     ])(
       'passes through non-entity response for $name settings',
       async ({ method }) => {
@@ -204,5 +243,89 @@ describe('SettingsController', () => {
         },
       ),
     ).toThrow('Validation failed');
+  });
+
+  it('returns metadata provider preference from settings', async () => {
+    settingsService.getSettings.mockResolvedValue(
+      createSettings({
+        metadata_provider_preference: MetadataProviderPreference.TVDB_PRIMARY,
+      }),
+    );
+
+    await expect(controller.getMetadataProviderPreference()).resolves.toEqual({
+      preference: MetadataProviderPreference.TVDB_PRIMARY,
+    });
+  });
+
+  it('falls back to the default metadata provider preference', async () => {
+    settingsService.getSettings.mockResolvedValue({
+      status: 'NOK',
+      code: 0,
+      message: 'settings not found',
+    });
+
+    await expect(controller.getMetadataProviderPreference()).resolves.toEqual({
+      preference: MetadataProviderPreference.TMDB_PRIMARY,
+    });
+  });
+
+  it.each([
+    {
+      name: 'TMDB',
+      method: 'updateTmdbSetting' as const,
+      serviceMethod: 'updateTmdbSetting' as const,
+      payload: { api_key: 'tmdb-key' } satisfies TmdbSetting,
+    },
+    {
+      name: 'TVDB',
+      method: 'updateTvdbSetting' as const,
+      serviceMethod: 'updateTvdbSetting' as const,
+      payload: { api_key: 'tvdb-key' } satisfies TvdbSetting,
+    },
+  ])(
+    'passes $name metadata settings through to the service',
+    async ({ method, serviceMethod, payload }) => {
+      await controller[method](payload);
+
+      expect(metadataSettingsService[serviceMethod]).toHaveBeenCalledWith(
+        payload,
+      );
+    },
+  );
+
+  it.each([
+    {
+      name: 'TMDB',
+      method: 'testTmdb' as const,
+      serviceMethod: 'testTmdb' as const,
+      payload: { api_key: 'tmdb-key' } satisfies TmdbSetting,
+    },
+    {
+      name: 'TVDB',
+      method: 'testTvdb' as const,
+      serviceMethod: 'testTvdb' as const,
+      payload: { api_key: 'tvdb-key' } satisfies TvdbSetting,
+    },
+  ])(
+    'tests $name metadata settings through the service',
+    async ({ method, serviceMethod, payload }) => {
+      await controller[method](payload);
+
+      expect(metadataSettingsService[serviceMethod]).toHaveBeenCalledWith(
+        payload,
+      );
+    },
+  );
+
+  it('passes metadata provider preference updates through to the service', async () => {
+    const payload = {
+      preference: MetadataProviderPreference.TVDB_PRIMARY,
+    };
+
+    await controller.updateMetadataProviderPreference(payload);
+
+    expect(
+      metadataSettingsService.updateMetadataProviderPreference,
+    ).toHaveBeenCalledWith(MetadataProviderPreference.TVDB_PRIMARY);
   });
 });

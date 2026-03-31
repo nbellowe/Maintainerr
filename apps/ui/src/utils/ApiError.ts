@@ -39,7 +39,7 @@ export const normalizeConnectionErrorMessage = (
     return fallback
   }
 
-  if (message === 'Failure' || message === 'Unknown error') {
+  if (message === 'Failure' || message === 'Unknown error' || message === '0') {
     return fallback
   }
 

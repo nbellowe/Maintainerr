@@ -1,6 +1,6 @@
 import { BasicResponseDto } from '@maintainerr/contracts';
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
-import { AxiosError } from 'axios';
+import { AxiosError, CanceledError } from 'axios';
 import _ from 'lodash';
 import { SettingsService } from '../../..//modules/settings/settings.service';
 import {
@@ -343,12 +343,18 @@ export class TautulliApiService {
           message: response.data.response.data.tautulli_version,
         };
       }
-    } catch (error) {
-      logConnectionTestError(this.logger, 'Tautulli');
+    } catch (e) {
+      logConnectionTestError(this.logger, 'Tautulli', e);
 
-      if (error instanceof AxiosError) {
-        if (error.response?.status === 400) {
-          const data = error.response.data as Response<unknown>;
+      if (e instanceof CanceledError) {
+        return {
+          status: 'NOK',
+          code: 0,
+          message: `Connection timed out after ${CONNECTION_TEST_TIMEOUT_MS / 1000} seconds with no response.`,
+        };
+      } else if (e instanceof AxiosError) {
+        if (e.response?.status === 400) {
+          const data = e.response.data as Response<unknown>;
 
           // Surface a Tautulli looking response to the user
           if (data.response?.message && data.response?.result === 'error') {
@@ -365,7 +371,7 @@ export class TautulliApiService {
         status: 'NOK',
         code: 0,
         message: formatConnectionFailureMessage(
-          error,
+          e,
           'Failed to connect to Tautulli. Verify URL and API key.',
         ),
       };

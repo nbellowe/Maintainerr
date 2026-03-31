@@ -420,14 +420,14 @@ export class SeerrApiService {
         code: 1,
         message: response.data.version,
       };
-    } catch (error) {
-      logConnectionTestError(this.logger, 'Seerr');
+    } catch (e) {
+      logConnectionTestError(this.logger, 'Seerr', e);
 
       return {
         status: 'NOK',
         code: 0,
         message: formatConnectionFailureMessage(
-          error,
+          e,
           'Failed to connect to Seerr. Verify URL and API key.',
         ),
       };

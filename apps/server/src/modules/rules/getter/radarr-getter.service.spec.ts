@@ -10,18 +10,19 @@ import {
   createRuleDto,
   createRulesDto,
 } from '../../../../test/utils/data';
+import { mockBuildServarrLookupCandidates } from '../../../../test/utils/metadata-mock';
 import { RadarrApi } from '../../api/servarr-api/helpers/radarr.helper';
 import { RadarrMovie } from '../../api/servarr-api/interfaces/radarr.interface';
 import { ServarrService } from '../../api/servarr-api/servarr.service';
-import { TmdbIdService } from '../../api/tmdb-api/tmdb-id.service';
 import { CollectionMedia } from '../../collections/entities/collection_media.entities';
 import { MaintainerrLogger } from '../../logging/logs.service';
+import { MetadataService } from '../../metadata/metadata.service';
 import { RadarrGetterService } from './radarr-getter.service';
 
 describe('RadarrGetterService', () => {
   let radarrGetterService: RadarrGetterService;
   let servarrService: Mocked<ServarrService>;
-  let tmdbIdService: Mocked<TmdbIdService>;
+  let metadataService: Mocked<MetadataService>;
   let logger: Mocked<MaintainerrLogger>;
 
   beforeEach(async () => {
@@ -30,8 +31,9 @@ describe('RadarrGetterService', () => {
 
     radarrGetterService = unit;
     servarrService = unitRef.get(ServarrService);
-    tmdbIdService = unitRef.get(TmdbIdService);
+    metadataService = unitRef.get(MetadataService);
     logger = unitRef.get(MaintainerrLogger);
+    mockBuildServarrLookupCandidates(metadataService);
   });
 
   afterEach(() => {
@@ -46,10 +48,38 @@ describe('RadarrGetterService', () => {
       collectionMedia = createCollectionMedia('movie');
       collectionMedia.collection.radarrSettingsId = 1;
       mediaItem = createMediaItem({ type: 'movie' });
-      tmdbIdService.getTmdbIdFromMediaServerId.mockResolvedValue({
-        type: 'movie',
-        id: 1,
+    });
+
+    it('does not query the fallback provider when the preferred lookup matches', async () => {
+      const movie = createRadarrMovie({
+        tmdbId: 1,
+        movieFile: createRadarrMovieFile({
+          mediaInfo: { audioLanguages: 'eng' } as any,
+        }),
       });
+      const mockedRadarrApi = mockRadarrApi();
+
+      metadataService.resolveIdsFromMediaItem.mockResolvedValue({
+        tmdb: 1,
+        tvdb: 2,
+        type: 'movie',
+      });
+
+      jest.spyOn(mockedRadarrApi, 'getMovieByTmdbId').mockResolvedValue(movie);
+      jest.spyOn(mockedRadarrApi, 'getMovieByTvdbId');
+
+      const response = await radarrGetterService.get(
+        22,
+        mediaItem,
+        createRulesDto({
+          collection: collectionMedia.collection,
+          dataType: 'movie',
+        }),
+      );
+
+      expect(response).toBe('eng');
+      expect(mockedRadarrApi.getMovieByTmdbId).toHaveBeenCalledWith(1);
+      expect(mockedRadarrApi.getMovieByTvdbId).not.toHaveBeenCalled();
     });
 
     it('should return true when the cut off is met', async () => {
@@ -295,10 +325,15 @@ describe('RadarrGetterService', () => {
 
     if (movie) {
       jest.spyOn(mockedRadarrApi, 'getMovieByTmdbId').mockResolvedValue(movie);
+      metadataService.resolveIdsFromMediaItem.mockResolvedValue({
+        tmdb: movie.tmdbId ?? 1,
+        type: 'movie',
+      });
     } else {
       jest
         .spyOn(mockedRadarrApi, 'getMovieByTmdbId')
         .mockImplementation(jest.fn());
+      metadataService.resolveIdsFromMediaItem.mockResolvedValue(undefined);
     }
 
     servarrService.getRadarrApiClient.mockResolvedValue(mockedRadarrApi);

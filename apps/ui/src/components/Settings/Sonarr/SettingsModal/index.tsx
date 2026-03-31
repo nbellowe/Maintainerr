@@ -190,11 +190,11 @@ const SonarrSettingsModal = (props: ISonarrSettingsModal) => {
           })
         }
       })
-      .catch((error: unknown) => {
+      .catch((err: unknown) => {
         setTestResult({
           status: false,
           version: getApiErrorMessage(
-            error,
+            err,
             'Failed to connect to Sonarr. Verify URL and API key.',
           ),
         })

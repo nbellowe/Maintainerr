@@ -130,11 +130,11 @@ const TautulliSettings = () => {
           })
         }
       })
-      .catch((error: unknown) => {
+      .catch((err: unknown) => {
         setTestResult({
           status: false,
           message: getApiErrorMessage(
-            error,
+            err,
             'Failed to connect to Tautulli. Verify URL and API key.',
           ),
         })

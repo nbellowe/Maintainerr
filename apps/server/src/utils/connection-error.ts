@@ -2,7 +2,6 @@ import { AxiosError } from 'axios';
 import type { MaintainerrLogger } from '../modules/logging/logs.service';
 
 export const CONNECTION_TEST_TIMEOUT_MS = 5000;
-
 const normalizeMessageText = (message?: string): string | undefined => {
   if (!message) {
     return undefined;
@@ -119,6 +118,20 @@ export const getErrorMessage = (
 export const logConnectionTestError = (
   logger: MaintainerrLogger,
   serviceName: string,
+  error?: unknown,
 ) => {
+  if (error instanceof Error) {
+    logger.error(
+      `${serviceName} connection test failed: ${error.message}`,
+      error.stack,
+    );
+    return;
+  }
+
+  if (error !== undefined) {
+    logger.error(`${serviceName} connection test failed: ${String(error)}`);
+    return;
+  }
+
   logger.error(`${serviceName} connection test failed`);
 };
