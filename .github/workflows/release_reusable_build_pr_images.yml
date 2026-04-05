@@ -169,7 +169,7 @@ jobs:
             $(jq -cr --arg slug "$ghcr_slug" '.tags | map(select(startswith($slug)) | "--tag " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
             ${ghcr_sources}
 
-      - name: Notify of release
+      - name: Comment on PR image build
         if: always()
         uses: mshick/add-pr-comment@v3
         with:

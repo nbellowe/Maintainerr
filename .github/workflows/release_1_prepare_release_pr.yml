@@ -117,7 +117,7 @@ jobs:
               --body-file "$RELEASE_PR_TEMPLATE"
 
             pr_number="$existing_number"
-            pr_url="${{ github.server_url }}/${{ github.repository }}/pull/${existing_number}"
+            pr_url="$(gh pr view "$existing_number" --json url --jq '.url')"
             echo "Updated release PR: $pr_url"
             {
               echo "## Release PR"
