@@ -56,8 +56,8 @@ jobs:
             if (context.eventName === 'workflow_call') {
               shouldRun = true;
               headRepo = `${context.repo.owner}/${context.repo.repo}`;
-              headSha = context.payload.inputs.ref;
-              prNumber = context.payload.inputs.pr_number;
+              headSha = context.payload.inputs?.ref;
+              prNumber = context.payload.inputs?.pr_number;
             } else {
               const { data: pr } = await github.rest.pulls.get({
                 owner: context.repo.owner,
