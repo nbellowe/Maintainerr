@@ -2,6 +2,12 @@ name: "Release 1 - Prepare PR"
 
 on:
   workflow_dispatch:
+    inputs:
+      export_digest:
+        description: Build and publish preview release images for the release PR
+        type: boolean
+        required: false
+        default: false
 
 concurrency:
   group: release-prepare-pr-${{ github.ref_name || github.run_id }}
@@ -44,6 +50,10 @@ jobs:
     name: Create or update release PR
     needs: guard_release_branch
     runs-on: ubuntu-latest
+    outputs:
+      pr_number: ${{ steps.pr.outputs.pr_number }}
+      pr_url: ${{ steps.pr.outputs.pr_url }}
+      head_sha: ${{ steps.pr.outputs.head_sha }}
     permissions:
       contents: read
       pull-requests: write
@@ -95,9 +105,11 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Create or update release PR
+        id: pr
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
+          current_sha="$(git rev-parse HEAD)"
           existing_number="$(gh pr list --base "$MAIN_BRANCH" --head "$DEVELOPMENT_BRANCH" --state open --json number --jq '.[0].number // empty')"
 
           if [ -n "$existing_number" ]; then
@@ -105,6 +117,7 @@ jobs:
               --title "$RELEASE_PR_TITLE" \
               --body-file "$RELEASE_PR_TEMPLATE"
 
+            pr_number="$existing_number"
             pr_url="$(gh pr view "$existing_number" --json url --jq '.url')"
             echo "Updated release PR: $pr_url"
             {
@@ -112,18 +125,40 @@ jobs:
               echo
               echo "Updated existing PR: $pr_url"
             } >> "$GITHUB_STEP_SUMMARY"
-            exit 0
+          else
+            pr_url="$(gh pr create \
+              --base "$MAIN_BRANCH" \
+              --head "$DEVELOPMENT_BRANCH" \
+              --title "$RELEASE_PR_TITLE" \
+              --body-file "$RELEASE_PR_TEMPLATE")"
+
+            pr_number="$(gh pr list --base "$MAIN_BRANCH" --head "$DEVELOPMENT_BRANCH" --state open --json number --jq '.[0].number')"
+
+            echo "Created release PR: $pr_url"
+            {
+              echo "## Release PR"
+              echo
+              echo "Created PR: $pr_url"
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
 
-          pr_url="$(gh pr create \
-            --base "$MAIN_BRANCH" \
-            --head "$DEVELOPMENT_BRANCH" \
-            --title "$RELEASE_PR_TITLE" \
-            --body-file "$RELEASE_PR_TEMPLATE")"
-
-          echo "Created release PR: $pr_url"
           {
-            echo "## Release PR"
-            echo
-            echo "Created PR: $pr_url"
-          } >> "$GITHUB_STEP_SUMMARY"
+            echo "pr_number=${pr_number}"
+            echo "pr_url=${pr_url}"
+            echo "head_sha=${current_sha}"
+          } >> "$GITHUB_OUTPUT"
+
+  export_release_digest:
+    name: Export release digest
+    if: ${{ github.event.inputs.export_digest == 'true' }}
+    needs: prepare_pr
+    permissions:
+      contents: read
+      packages: write
+      pull-requests: write
+    uses: ./.github/workflows/release_reusable_build_pr_images.yml
+    secrets: inherit
+    with:
+      ref: ${{ needs.prepare_pr.outputs.head_sha }}
+      pr_number: ${{ needs.prepare_pr.outputs.pr_number }}
+      image_tag: pr-${{ needs.prepare_pr.outputs.pr_number }}
