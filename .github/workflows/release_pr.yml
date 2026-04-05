@@ -56,8 +56,8 @@ jobs:
             if (context.eventName === 'workflow_call') {
               shouldRun = true;
               headRepo = `${context.repo.owner}/${context.repo.repo}`;
-              headSha = '${{ inputs.ref }}';
-              prNumber = '${{ inputs.pr_number }}';
+              headSha = context.payload.inputs.ref;
+              prNumber = context.payload.inputs.pr_number;
             } else {
               const { data: pr } = await github.rest.pulls.get({
                 owner: context.repo.owner,
@@ -81,7 +81,7 @@ jobs:
             core.setOutput('head_repo', headRepo);
             core.setOutput('head_sha', headSha);
             core.setOutput('pr_number', prNumber);
-            core.setOutput('should_run', String(shouldRun));
+            core.setOutput('should_run', shouldRun ? 'true' : 'false');
 
       - name: Notify unsupported fork
         if: github.event_name == 'issue_comment' && steps.pr.outputs.should_run == 'false' && steps.pr.outputs.head_repo != ''
