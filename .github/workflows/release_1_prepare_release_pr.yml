@@ -151,7 +151,7 @@ jobs:
 
   export_release_digest:
     name: Export release digest
-    if: ${{ github.event.inputs.export_digest == 'true' }}
+    if: ${{ inputs.export_digest }}
     needs: prepare_pr
     permissions:
       contents: read

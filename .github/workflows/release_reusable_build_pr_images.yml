@@ -165,7 +165,8 @@ jobs:
         with:
           allow-repeats: true
           message-success: |
-            Released to `maintainerr/maintainerr:${{ inputs.image_tag }}` :rocket:
+            Released to `maintainerr/maintainerr:${{ inputs.image_tag }}` and
+            `ghcr.io/maintainerr/maintainerr:${{ inputs.image_tag }}` :rocket:
           message-failure: |
             :bangbang: There was an error trying to release the PR.
           issue: ${{ inputs.pr_number }}
