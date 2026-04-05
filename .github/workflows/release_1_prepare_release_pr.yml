@@ -131,7 +131,7 @@ jobs:
               --title "$RELEASE_PR_TITLE" \
               --body-file "$RELEASE_PR_TEMPLATE")"
 
-            pr_number="$(gh pr list --base "$MAIN_BRANCH" --head "$DEVELOPMENT_BRANCH" --state open --json number --jq '.[0].number')"
+            pr_number="$(gh pr view "$pr_url" --json number --jq '.number')"
 
             echo "Created release PR: $pr_url"
             {
