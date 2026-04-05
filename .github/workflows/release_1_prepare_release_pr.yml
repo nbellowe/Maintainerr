@@ -157,9 +157,8 @@ jobs:
       contents: read
       packages: write
       pull-requests: write
-    uses: ./.github/workflows/release_reusable_build_pr_images.yml
+    uses: ./.github/workflows/release_pr.yml
     secrets: inherit
     with:
       ref: ${{ needs.prepare_pr.outputs.head_sha }}
       pr_number: ${{ needs.prepare_pr.outputs.pr_number }}
-      image_tag: pr-${{ needs.prepare_pr.outputs.pr_number }}

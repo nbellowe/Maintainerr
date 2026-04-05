@@ -4,6 +4,14 @@ on:
   issue_comment:
     types:
       - created
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        required: true
+      pr_number:
+        type: string
+        required: true
 
 permissions:
   contents: read
@@ -19,13 +27,16 @@ jobs:
     name: Resolve PR context
     if: >-
       ${{
-        github.event.issue.pull_request &&
-        startsWith(github.event.comment.body, '/release-pr') &&
-        github.event.issue.state == 'open' &&
+        github.event_name == 'workflow_call' ||
         (
-          github.event.comment.author_association == 'COLLABORATOR' ||
-          github.event.comment.author_association == 'OWNER' ||
-          github.event.comment.author_association == 'MEMBER'
+          github.event.issue.pull_request &&
+          startsWith(github.event.comment.body, '/release-pr') &&
+          github.event.issue.state == 'open' &&
+          (
+            github.event.comment.author_association == 'COLLABORATOR' ||
+            github.event.comment.author_association == 'OWNER' ||
+            github.event.comment.author_association == 'MEMBER'
+          )
         )
       }}
     runs-on: ubuntu-latest
@@ -33,35 +44,47 @@ jobs:
       should_run: ${{ steps.pr.outputs.should_run }}
       head_repo: ${{ steps.pr.outputs.head_repo }}
       head_sha: ${{ steps.pr.outputs.head_sha }}
+      pr_number: ${{ steps.pr.outputs.pr_number }}
     steps:
       - name: Gather PR metadata
         id: pr
         uses: actions/github-script@v8
         with:
           script: |
-            const { data: pr } = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number,
-            });
+            let shouldRun, headRepo, headSha, prNumber;
 
-            const headRepo = pr.head.repo?.full_name ?? '';
-            const headSha = pr.head.sha;
-            const repoFullName = `${context.repo.owner}/${context.repo.repo}`;
-            const shouldRun = headRepo === repoFullName;
+            if (context.eventName === 'workflow_call') {
+              shouldRun = true;
+              headRepo = `${context.repo.owner}/${context.repo.repo}`;
+              headSha = '${{ inputs.ref }}';
+              prNumber = '${{ inputs.pr_number }}';
+            } else {
+              const { data: pr } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number,
+              });
+
+              headRepo = pr.head.repo?.full_name ?? '';
+              headSha = pr.head.sha;
+              prNumber = String(pr.number);
+              const repoFullName = `${context.repo.owner}/${context.repo.repo}`;
+              shouldRun = headRepo === repoFullName;
+
+              if (!shouldRun) {
+                core.warning(
+                  `Refusing to run privileged release workflow on forked repository ${headRepo}.`,
+                );
+              }
+            }
 
             core.setOutput('head_repo', headRepo);
             core.setOutput('head_sha', headSha);
-            core.setOutput('should_run', shouldRun ? 'true' : 'false');
-
-            if (!shouldRun) {
-              core.warning(
-                `Refusing to run privileged release workflow on forked repository ${headRepo}.`,
-              );
-            }
+            core.setOutput('pr_number', prNumber);
+            core.setOutput('should_run', String(shouldRun));
 
       - name: Notify unsupported fork
-        if: steps.pr.outputs.should_run == 'false' && steps.pr.outputs.head_repo != ''
+        if: github.event_name == 'issue_comment' && steps.pr.outputs.should_run == 'false' && steps.pr.outputs.head_repo != ''
         uses: mshick/add-pr-comment@v3
         with:
           allow-repeats: false
@@ -86,7 +109,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Add eyes reaction to comment
-        if: matrix.platform == 'linux/amd64'
+        if: matrix.platform == 'linux/amd64' && github.event_name == 'issue_comment'
         uses: peter-evans/create-or-update-comment@v5
         with:
           comment-id: ${{ github.event.comment.id }}
@@ -119,7 +142,7 @@ jobs:
             ${{ env.DOCKERHUB_SLUG }}
             ${{ env.GHCR_SLUG }}
           tags: |
-            type=raw,value=pr-${{ github.event.issue.number }}
+            type=raw,value=pr-${{ needs.resolve-pr.outputs.pr_number }}
           labels: org.opencontainers.image.revision=${{ steps.vars.outputs.sha }}
 
       - name: Log in to GitHub Container registry
@@ -202,7 +225,7 @@ jobs:
             ${{ env.DOCKERHUB_SLUG }}
             ${{ env.GHCR_SLUG }}
           tags: |
-            type=raw,value=pr-${{ github.event.issue.number }}
+            type=raw,value=pr-${{ needs.resolve-pr.outputs.pr_number }}
           labels: org.opencontainers.image.revision=${{ needs.build-docker-image.outputs.sha }}
 
       - name: Create manifest list and push
@@ -221,7 +244,7 @@ jobs:
         with:
           allow-repeats: true
           message-success: |
-            Released to `maintainerr/maintainerr:pr-${{ github.event.issue.number }}` :rocket:
+            Released to `maintainerr/maintainerr:pr-${{ needs.resolve-pr.outputs.pr_number }}` :rocket:
           message-failure: |
             :bangbang: There was an error trying to release the PR.
-          issue: ${{ github.event.issue.number }}
+          issue: ${{ needs.resolve-pr.outputs.pr_number }}
