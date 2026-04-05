@@ -12,10 +12,6 @@ on:
       image_tag:
         type: string
         required: true
-      comment_id:
-        type: string
-        required: false
-        default: ""
 
 concurrency:
   group: release-pr-images-${{ inputs.pr_number }}-${{ inputs.image_tag }}
@@ -43,13 +39,6 @@ jobs:
             platform: linux/arm64
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Add eyes reaction to comment
-        if: matrix.platform == 'linux/amd64' && inputs.comment_id != ''
-        uses: peter-evans/create-or-update-comment@v5
-        with:
-          comment-id: ${{ inputs.comment_id }}
-          reactions: eyes
-
       - name: Prepare
         run: |
           platform=${{ matrix.platform }}

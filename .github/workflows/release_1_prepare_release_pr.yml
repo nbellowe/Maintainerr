@@ -109,7 +109,6 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
-          current_sha="$(git rev-parse HEAD)"
           existing_number="$(gh pr list --base "$MAIN_BRANCH" --head "$DEVELOPMENT_BRANCH" --state open --json number --jq '.[0].number // empty')"
 
           if [ -n "$existing_number" ]; then
@@ -141,6 +140,8 @@ jobs:
               echo "Created PR: $pr_url"
             } >> "$GITHUB_STEP_SUMMARY"
           fi
+
+          current_sha="$(git rev-parse HEAD)"
 
           {
             echo "pr_number=${pr_number}"
