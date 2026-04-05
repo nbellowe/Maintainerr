@@ -117,7 +117,7 @@ jobs:
               --body-file "$RELEASE_PR_TEMPLATE"
 
             pr_number="$existing_number"
-            pr_url="$(gh pr view "$existing_number" --json url --jq '.url')"
+            pr_url="${{ github.server_url }}/${{ github.repository }}/pull/${pr_number}"
             echo "Updated release PR: $pr_url"
             {
               echo "## Release PR"
@@ -141,12 +141,12 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 
-          current_sha="$(git rev-parse HEAD)"
+          head_sha="$(git rev-parse HEAD)"
 
           {
             echo "pr_number=${pr_number}"
             echo "pr_url=${pr_url}"
-            echo "head_sha=${current_sha}"
+            echo "head_sha=${head_sha}"
           } >> "$GITHUB_OUTPUT"
 
   export_release_digest:
