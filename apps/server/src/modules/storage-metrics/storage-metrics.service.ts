@@ -251,6 +251,10 @@ export class StorageMetricsService {
       mounts,
       rootFolderPathsByInstance,
     );
+    const crossTypeMergeableKeys = this.resolveCrossTypeMergeableKeys(
+      mounts,
+      countedPathsByInstance,
+    );
     const seen = new Map<string, StorageDiskspaceEntry>();
 
     for (const mount of mounts) {
@@ -267,7 +271,13 @@ export class StorageMetricsService {
       }
 
       const host = hostByInstance.get(instanceKey) ?? '';
-      const key = this.buildTotalsDedupKey(mount, host);
+      const key = this.buildTotalsDedupKey(
+        mount,
+        host,
+        crossTypeMergeableKeys.has(
+          this.buildCrossTypeMergeSignatureKey(mount),
+        ),
+      );
 
       const existing = seen.get(key);
       if (
@@ -304,6 +314,40 @@ export class StorageMetricsService {
       accurateTotalSpace:
         seen.size > 0 && accurateMountCount === seen.size && totalSpace > 0,
     };
+  }
+
+  /**
+   * Identify accurate root-folder-backed mounts that should be allowed to
+   * merge across hostnames. This is intentionally narrow: it only applies when
+   * the same filesystem-like signature is reported by both a Radarr instance
+   * and a Sonarr instance. Same-type instances still stay partitioned by host.
+   */
+  private resolveCrossTypeMergeableKeys(
+    mounts: StorageDiskspaceEntry[],
+    countedPathsByInstance: Map<string, Set<string>>,
+  ): Set<string> {
+    const typesBySignature = new Map<string, Set<'radarr' | 'sonarr'>>();
+
+    for (const mount of mounts) {
+      if (!mount.path || !mount.hasAccurateTotalSpace) continue;
+
+      const instanceKey = `${mount.instanceType}||${mount.instanceId}`;
+      const counted = countedPathsByInstance.get(instanceKey);
+      if (counted?.size && !counted.has(normalizeDiskPath(mount.path))) {
+        continue;
+      }
+
+      const signature = this.buildCrossTypeMergeSignatureKey(mount);
+      const types = typesBySignature.get(signature) ?? new Set();
+      types.add(mount.instanceType);
+      typesBySignature.set(signature, types);
+    }
+
+    return new Set(
+      [...typesBySignature.entries()]
+        .filter(([, types]) => types.has('radarr') && types.has('sonarr'))
+        .map(([signature]) => signature),
+    );
   }
 
   /**
@@ -363,14 +407,17 @@ export class StorageMetricsService {
   private buildTotalsDedupKey(
     mount: StorageDiskspaceEntry,
     host: string,
+    allowCrossHostMerge: boolean,
   ): string {
+    const scope = allowCrossHostMerge ? 'cross-type' : host;
+
     if (!mount.hasAccurateTotalSpace) {
-      return `${host}||path||${normalizeDiskPath(mount.path ?? '')}`;
+      return `${scope}||path||${normalizeDiskPath(mount.path ?? '')}`;
     }
 
     const label = mount.label?.trim().toLowerCase();
     if (label) {
-      return `${host}||label||${label}||${mount.totalSpace}`;
+      return `${scope}||label||${label}||${mount.totalSpace}`;
     }
 
     // Arr APIs do not expose a stable filesystem identifier. For accurate
@@ -380,7 +427,21 @@ export class StorageMetricsService {
     const freeSpaceBucket = Math.floor(
       mount.freeSpace / FREE_SPACE_BUCKET_BYTES,
     );
-    return `${host}||cap||${mount.totalSpace}||${freeSpaceBucket}`;
+    return `${scope}||cap||${mount.totalSpace}||${freeSpaceBucket}`;
+  }
+
+  private buildCrossTypeMergeSignatureKey(
+    mount: StorageDiskspaceEntry,
+  ): string {
+    const label = mount.label?.trim().toLowerCase();
+    if (label) {
+      return `label||${label}||${mount.totalSpace}`;
+    }
+
+    const freeSpaceBucket = Math.floor(
+      mount.freeSpace / FREE_SPACE_BUCKET_BYTES,
+    );
+    return `cap||${mount.totalSpace}||${freeSpaceBucket}`;
   }
 
   private extractHost(url: string | undefined): string {

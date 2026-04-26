@@ -264,6 +264,32 @@ describe('StorageMetricsService', () => {
         { 'radarr||1': 'radarr-a.local', 'sonarr||1': 'sonarr-b.local' },
       );
 
+      expect(totals.totalSpace).toBe(200);
+      expect(totals.mountCount).toBe(1);
+    });
+
+    it('still keeps same-type identical capacities separate across different hosts', () => {
+      const totals = compute(
+        [
+          mount({
+            instanceType: 'radarr',
+            instanceId: 1,
+            path: '/movies',
+            freeSpace: 180,
+            totalSpace: 200,
+          }),
+          mount({
+            instanceType: 'radarr',
+            instanceId: 2,
+            path: '/movies',
+            freeSpace: 180,
+            totalSpace: 200,
+          }),
+        ],
+        { 'radarr||1': ['/movies'], 'radarr||2': ['/movies'] },
+        { 'radarr||1': 'radarr-a.local', 'radarr||2': 'radarr-b.local' },
+      );
+
       expect(totals.totalSpace).toBe(400);
       expect(totals.mountCount).toBe(2);
     });
